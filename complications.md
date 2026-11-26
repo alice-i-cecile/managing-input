@@ -564,7 +564,7 @@ Southpaw, Blender-style controls, ESDF inputs and so on.
 **Prior art:** LWIM handles this very simply: simply construct an `InputMap` however you want,
 typically via a method or three on your `Action` enum.
 
-BEIs examples suggest using a settings struct (see WM3 prior art), with a `Default` trait impl,
+BEIs examples suggest using a settings struct (see WM4 prior art), with a `Default` trait impl,
 although constructors could obviously be used there too.
 
 `bevy_action_map` has a distinction between the default set of action bindings,
@@ -602,7 +602,7 @@ Thankfully, we already need a way to serialize and deserialize an input binding:
       pub action: ActionPath,
       /// The owner whose actions these control bindings belong to.
       ///
-      /// See WM4 for more information on local multiplayer.
+      /// See WM2 for more information on local multiplayer.
       pub owner: Owner,
       /// The "slot" (e.g. first vs second binding) that stores this binding.
       pub slot: u16,

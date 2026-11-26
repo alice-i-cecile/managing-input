@@ -78,7 +78,7 @@ Add a preset concept, as discussed in R8.
 
 ## Phase 9: Local multiplayer
 
-1. Add `Owner` and `PlayerId`, per WM4.
+1. Add `Owner` and `PlayerId`, per WM2.
 2. Add an `InputRoot` entity.
 3. Refactor `InputMap` data structure and systems to make these work with multiple actors.
 4. Add an example.

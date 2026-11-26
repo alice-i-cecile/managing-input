@@ -319,12 +319,12 @@ pub struct InputMap {
     /// invariants around the number of "slots" or "columns" on bindings.
     /// 
     /// Making this field private is also useful because it allows us
-    /// to keep `ActionId` as a private mechanism, see WM3's
+    /// to keep `ActionId` as a private mechanism, see WM4's
     /// discussion on `ActionPath`.
     /// 
-    // Note that this is complicated by WM4
+    // Note that this is complicated by WM2
     action_bindings: BTreeMap<ActionId, Vec<Option<BindingRow>>>,
-    // See WM3 for other fields on this type
+    // See WM4 for other fields on this type
     ..
 }
 
@@ -333,12 +333,12 @@ pub struct InputMap {
 pub struct BindingRow {
     /// The input that should be pressed (etc) in order to activate the action.
     pub binding: InputBinding,
-    // See WM3 for other fields on this type
+    // See WM4 for other fields on this type
     ..
 }
 ```
 
-Very simple, with room to expand by adding fields (see WM3).
+Very simple, with room to expand by adding fields (see WM4).
 The core model, that bindings are basically just a `HashMap`,
 is not *wrong*!
 
@@ -365,16 +365,96 @@ without a whole whack of incidental complexity.
 The selected `Vec<Option<BindingRow>>` design, with private fields, configuration,
 and runtime-enforced invariants. 
 This offers a reasonable compromise between enforced strictness and flexibility, at the cost of some complexity.
-However, because we want to make this field private *anyways* (see WM3),
+However, because we want to make this field private *anyways* (see WM4),
 the cost is amortized across these design choices.
 
-#### WM2: Where in the ECS do we store the mapping?
+#### WM2: What about local multiplayer? 
+
+**Status:** Proposed
+
+**Problem:** Much to the dismay of input mapping library authors everywhere, sometimes people want to play a game together
+on the same computer, using distinct sets of inputs to control different characters simultaneously.
+
+This complicates *everything*, by removing the assumption that there is exactly one input mapping to worry about.
+
+While the most common case is seperate input devices (mostly gamepads) per player,
+local multiplayer that shares a keyboard is a real niche use case that would be nice to support.
+
+Note that action-driven bots (A8) pose similar challenges: they require distinct action states,
+but do not require additional input maps.
+
+**Prior art:** In LWIM, the canonical solution to this is to insert multiple input maps and action state components,
+one per player. This works smoothly, but attaching the input maps to the player entity has the lifecycle difficulties discussed in WM3.
+
+BEI gives each player their own entity, and then attaches the context components to them, with actions and bindings nested underneath in the usual fashion.
+This allows for full customization per player, but like usual, persistence and patterns for setting these bindings are left to the library user.
+
+BAM declares a single set of input bindings across all local multiplayer players, with optional per-device overrides.
+Clashing inputs (D6) are resolved at a per-device level, rather than aggregated.
+
+Each library has its own solution to restricting player input across gamepads:
+
+- LWIM allows inputs to be restricted to a single gamepad, defaulting to any gamepad
+- BEI tracks this on the context entity, swapping between `Any`, `Single(pad_entity)` and `None`
+- BAM supports this for more than just keyboards, allowing distinct e.g. mice and keyboards per player, although `winit` does not support this setup
+
+**Solution:** There are a few moving parts here:
+
+1. Where and how do we store the input bindings?
+2. How do we manage multiple action states?
+3. How do we assign input devices to specific players?
+
+Conceptually, the answer to the first question is simple: you put it in the input map,
+which, per WM3, is stored in a simple resource.
+This is essential for ease of serialization (WM4), and allows you to readily detect conflicts between
+bindings across players.
+
+Doing so requires keying each action binding (see WM1) by its owner first, and then by action,
+as we want to look up "all bindings for each player" in order to resolve conflicts and set up binding GUIs:
+
+```rust
+pub enum Owner {
+    /// One binding set for the whole application, used by game-agnostic actions.
+    Shared,
+    /// A distinct binding set for each player.
+    Player(PlayerId),
+}
+
+// Because this is a BTreeMap, we can fairly cheaply fetch all actions belonging to a specific owner,
+// without another layer of actions.
+action_bindings: BTreeMap<(Owner, ActionId), Vec<Option<BindingRow>>>,
+```
+
+Whether an action uses the shared owner or one owner per player is declared in the `Action` trait:
+
+```rust
+pub enum ActionScope {
+    Shared,
+    PerPlayer,
+}
+```
+
+Registration rejects rows whose owner does not match the action's scope (see WM5).
+
+`PlayerId` can be defined using exactly the same patterns as `ActionId` etc (WA1),
+supporting both type safety and runtime flexibility as desired,
+while allowing us to serialize per-player input bindings.
+
+In contrast to the shared input map, each player needs their own distinct `ActionState` (D4),
+tracking which actions are pressed, their value, what's disabled (D5) etc.
+This is stored as a component on each entity, as  the `PlayerId` required to map players to their bindings.
+
+The mapping between input devices and players must also be maintained, likely in its own resource, `DeviceMapping`, which could live in `bevy_input` itself.
+We should follow BAM's strategy of expanding this beyond gamepads, as the cost is relatively low and the constistent benefits are good.
+Persistent device identifiers (which work to at least some degree across disconnects) would also help improve robutsness.
+
+#### WM3: Where in the ECS do we store the mapping?
 
 **Status:** Proposed
 
 **Problem:** Once we have the mapping, we need to *put* it somewhere. Does it belong in a resource?
 A component on the player entity?
-A component on *each* player entity (see WM4)?
+A component on *each* player entity (see WM2)?
 
 Do we have a single canonical input map?
 
@@ -414,7 +494,7 @@ Keeping all of the information in a single place makes this very straightforward
 while the standard Rust nature of the setup improves robustness and makes documentation and comprehension easy.
 
 Changing the input bindings is a simple struct mutation (no seperate `Overrides` concept required, no ECS operations),
-and these mutations made can be serialized directly (see WM3, R8 and R9).
+and these mutations made can be serialized directly (see WM4, R8 and R9).
 
 However, being able to check the state of each action (e.g. "is Jump pressed") on the same entity as the player
 is incredibly convenient, both in systems and observers.
@@ -425,15 +505,15 @@ while input mapping remains a global resource.
 Shared or game-agnostic actions (e.g. `bevy_ui::Cancel`) belong to a spawned-by-default entity,
 called `InputRoot`. See D6 for more discussion on this point.
 
-Under a resource-based design, special care is needed to cover local multiplayer, see WM4.
-The per-player, component-based input maps simplify questions around local multiplayer (see WM4),
+Under a resource-based design, special care is needed to cover local multiplayer, see WM2.
+The per-player, component-based input maps simplify questions around local multiplayer (see WM2),
 but the lifecycle issues created by that approach make it a footgun in practice.
 Storing the *input map* in a resource avoids that,
 while tracking *action state* on entity-bound components makes sense: despawned entities should not be taking actions.
 
 Similar care must be taken for the actions of bots (A8), to ensure that input move the active player, not their synthetic peers!
 
-#### WM3: How is this data structure serialized?
+#### WM4: How is this data structure serialized?
 
 **Status:** Proposed
 
@@ -530,86 +610,6 @@ the entire input map, as the size costs are insignificant.
 As discussed in R9, we can preserve the benefits of provenance information by logging this
 explicitly in the input map.
 
-#### WM4: What about local multiplayer? 
-
-**Status:** Proposed
-
-**Problem:** Much to the dismay of input mapping library authors everywhere, sometimes people want to play a game together
-on the same computer, using distinct sets of inputs to control different characters simultaneously.
-
-This complicates *everything*, by removing the assumption that there is exactly one input mapping to worry about.
-
-While the most common case is seperate input devices (mostly gamepads) per player,
-local multiplayer that shares a keyboard is a real niche use case that would be nice to support.
-
-Note that action-driven bots (A8) pose similar challenges: they require distinct action states,
-but do not require additional input maps.
-
-**Prior art:** In LWIM, the canonical solution to this is to insert multiple input maps and action state components,
-one per player. This works smoothly, but attaching the input maps to the player entity has the lifecycle difficulties discussed in WM2.
-
-BEI gives each player their own entity, and then attaches the context components to them, with actions and bindings nested underneath in the usual fashion.
-This allows for full customization per player, but like usual, persistence and patterns for setting these bindings are left to the library user.
-
-BAM declares a single set of input bindings across all local multiplayer players, with optional per-device overrides.
-Clashing inputs (D6) are resolved at a per-device level, rather than aggregated.
-
-Each library has its own solution to restricting player input across gamepads:
-
-- LWIM allows inputs to be restricted to a single gamepad, defaulting to any gamepad
-- BEI tracks this on the context entity, swapping between `Any`, `Single(pad_entity)` and `None`
-- BAM supports this for more than just keyboards, allowing distinct e.g. mice and keyboards per player, although `winit` does not support this setup
-
-**Solution:** There are a few moving parts here:
-
-1. Where and how do we store the input bindings?
-2. How do we manage multiple action states?
-3. How do we assign input devices to specific players?
-
-Conceptually, the answer to the first question is simple: you put it in the input map,
-which, per WM2, is stored in a simple resource.
-This is essential for ease of serialization (WM3), and allows you to readily detect conflicts between
-bindings across players.
-
-Doing so requires keying each action binding (see WM1) by its owner first, and then by action,
-as we want to look up "all bindings for each player" in order to resolve conflicts and set up binding GUIs:
-
-```rust
-pub enum Owner {
-    /// One binding set for the whole application, used by game-agnostic actions.
-    Shared,
-    /// A distinct binding set for each player.
-    Player(PlayerId),
-}
-
-// Because this is a BTreeMap, we can fairly cheaply fetch all actions belonging to a specific owner,
-// without another layer of actions.
-action_bindings: BTreeMap<(Owner, ActionId), Vec<Option<BindingRow>>>,
-```
-
-Whether an action uses the shared owner or one owner per player is declared in the `Action` trait:
-
-```rust
-pub enum ActionScope {
-    Shared,
-    PerPlayer,
-}
-```
-
-Registration rejects rows whose owner does not match the action's scope (see WM5).
-
-`PlayerId` can be defined using exactly the same patterns as `ActionId` etc (WA1),
-supporting both type safety and runtime flexibility as desired,
-while allowing us to serialize per-player input bindings.
-
-In contrast to the shared input map, each player needs their own distinct `ActionState` (D4),
-tracking which actions are pressed, their value, what's disabled (D5) etc.
-This is stored as a component on each entity, as  the `PlayerId` required to map players to their bindings.
-
-The mapping between input devices and players must also be maintained, likely in its own resource, `DeviceMapping`, which could live in `bevy_input` itself.
-We should follow BAM's strategy of expanding this beyond gamepads, as the cost is relatively low and the constistent benefits are good.
-Persistent device identifiers (which work to at least some degree across disconnects) would also help improve robutsness.
-
 #### WM5: How do users bind inputs to actions?
 
 **Status:** Proposed
@@ -702,7 +702,7 @@ while push-style APIs are very convenient and allow users to write complex logic
 To avoid divergence between these APIs, we should stick to the state-based pull-style API as the primary record of truth,
 with push-style events derived from it using systems which run just after it is updated during the input-mapping step.
 
-This is recorded in the `ActionState` of each actor, tracked as a component on the entity that is actually acting (see WM2, WM4).
+This is recorded in the `ActionState` of each actor, tracked as a component on the entity that is actually acting (see WM3, WM2).
 
 ```rust
 /// A collection of [`ActionStatus`], representing the state of each action for a given actor.
@@ -849,15 +849,15 @@ allowing users to opt out of this concept completely if desired (e.g. for learni
 
 The other thing that we must track is the disabled state of each action and context.
 That's simple enough, but belongs to each action *instance*, not the action as a whole.
-As a result, it belongs on the `ActionState` component for each entity (see D4 and WM4).
+As a result, it belongs on the `ActionState` component for each entity (see D4 and WM2).
 Tracking both disabled *actions* seperately from disabled *contexts* is useful,
 as it allows us to ensure that actions disabled for reasons *other* than their context do not become re-activated when their context activates.
 Consider a passive that disables one of your conditional moves, for example.
 
-Note that local multiplayer adds another wrinkle: the disabling maps must be also be keyed by owner, see WM4.
+Note that local multiplayer adds another wrinkle: the disabling maps must be also be keyed by owner, see WM2.
 
 Contexts use a runtime `ContextId` identifier, with a stable path and a custom type,
-following the exact same pattern as actions (WA1) and players (WM4).
+following the exact same pattern as actions (WA1) and players (WM2).
 
 The exact semantics of "what does it mean for an action to be disabled" should follow BAM.
 
@@ -905,7 +905,7 @@ In order to determine which actions take effect for a given set of inputs,
 we must solve the arbitration ("clashing inputs") problem: what happens if both `S` and `Ctrl+S` are bound?
 
 The results of this arbitration can be cached and computed incrementally,
-whenever the `InputMap` changes, although the `Owner` of each action should be considered (see WM4).
+whenever the `InputMap` changes, although the `Owner` of each action should be considered (see WM2).
 Centralizing this gives games the ability to simply reject pathological input bindings (e.g. "F is already bound to Pay Respects")
 through the use of `Result`-ful input binding APIs (WM5).
 
