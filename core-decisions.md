@@ -26,7 +26,7 @@ The questions that drive these decisions follow below, with the following struct
 
 - scrolling and mouse movement belong to a fourth category, deltas, as they are not semantically equivalent to something like a gamepad stick, and are not similarly normalized
 - analog buttons like triggers belong to a fifth category, throttle-likes, as they vary from 0 to 1, not -1 to 1
-  
+
 Extend as needed by real users (e.g. 3D inputs for VR).
 
 #### WI2: How should we model input across device types?
@@ -58,7 +58,7 @@ struct InputMessage {
   /// Any unit scaling (e.g. for mouse scrolling) or device-specific correction (e.g. for gamestick drift) has already been done,
   /// and values are clamped to the appropriate range.
   value: InputValue,
-  /// The input device that created this message. 
+  /// The input device that created this message.
   device: Entity,
   /// The time that this message was created.
   ///
@@ -74,7 +74,7 @@ enum InputValue {
   /// The state of a button. `true` means the button is/was pressed, `false` means it is/was released.
   Button(bool),
   /// The degree to which an analog button (like most gamepad triggers) or similar is depressed, in the range of 0 to 1
-  /// 
+  ///
   /// 1.0 means the button is fully pressed, while 0.0 means the button is fully released.
   Throttle(f32),
   /// A normalized position along a single axis, in the range of -1 to 1.
@@ -82,7 +82,7 @@ enum InputValue {
   /// A normalized position on two axes, where both axes are in the range of -1 to 1.
   DualAxis(Vec2),
   /// A positional change that has occurred, e.g. via accumulated mouse motion.
-  /// 
+  ///
   /// Unlike the other variants of this enum, changes are rescaled but not clamped to a range.
   Delta(Vec2)
 }
@@ -126,7 +126,7 @@ Note that I18 and WI4 discuss this problem further: covering converted and more 
 
 **Prior art:** In Bevy, each gamepad has its own entity, which stores any metadata about the device. Similarly, `PointerId` is a stable identifier for pointer entities across spawn/despawn cycles.
 
-**Solution:** Do the same for mice and keyboards, assigning each an entitity. Where no identifying information is provided, treat all devices of the same class as a single device.
+**Solution:** Do the same for mice and keyboards, assigning each an entity. Where no identifying information is provided, treat all devices of the same class as a single device.
 
 #### WI4: How are composite inputs, such as chords, represented?
 
@@ -191,7 +191,7 @@ and broadly offer terrible tooling integration (go-to-definition, docs, rename).
 For registration, we have four options:
 
 1. An explicit `app.register_action` extension method
-2. Registration on first mutating access, as Bevy does for components. 
+2. Registration on first mutating access, as Bevy does for components.
 3. Registration on *any* access, via interior mutability.
 4. Reflection style auto-registration.
 
@@ -208,7 +208,7 @@ they can complicate the internals substantially (boxed trait objects T_T), often
 Learning from `bevy_ecs` and `bevy_action_map`, we can use a type-erased `ActionId` as our standard identifier, hashed from the unique path (e.g. `player::jump` or `bevy::ui::activate`) given to each action.
 This path serves as a structured human-readable identifier, mostly in type-erased contexts like persistence, networked multiplayer or BRP.
 To ensure that this complexity unfolds slowly, the path for each action defaults to its type path, but can be overwritten in the `Action` trait impl.
-Use cases that rely heavily on stable identifiers (such as serialization) warn when implict paths are found to avoid headaches caused by incidental refactoring.
+Use cases that rely heavily on stable identifiers (such as serialization) warn when implicit paths are found to avoid headaches caused by incidental refactoring.
 
 #### WA2: How do we record the shape of each action and the acceptable inputs to bind to it?
 
@@ -221,7 +221,7 @@ and trying to aim with a single key press simply won't work.
 Every action and every input has a shape, and we should ensure that these line up
 to avoid nonsensical, broken input bindings.
 
-**Prior art:** LWIM annotates action variants with their shape: buttonlike, axislike etc, via a `input_control_kind(&self)` method on `Action`.
+**Prior art:** LWIM annotates action variants with their shape: buttonlike, axislike, etc, via a `input_control_kind(&self)` method on `Action`.
 This has typed helper methods, but enforcement is only checked in debug mode.
 Why? I don't remember!
 
@@ -229,7 +229,7 @@ BEI records the shape using an `Output` associated type on its trait.
 It handles mismatches by automatically converting inputs into the correct shape for the action:
 by zero-padding or discarding later values.
 
-`bevy_action_map` records both an [Output](https://docs.rs/bevy_action_map/latest/bevy_action_map/action/trait.InputAction.html#associatedtype.Output) associated type (which determines the type returned when the action is checked) and an  `Intent` type, which determines the acceptable inputs to be bound to it.
+`bevy_action_map` records both an [Output](https://docs.rs/bevy_action_map/latest/bevy_action_map/action/trait.InputAction.html#associatedtype.Output) associated type (which determines the type returned when the action is checked) and an `Intent` type, which determines the acceptable inputs to be bound to it.
 
 Inputs are automatically coerced, more carefully than in BEI, to the correct shape, with errors
 on failure.
@@ -287,7 +287,7 @@ This is, in essence, what [LWIM's InputMap](https://docs.rs/leafwing-input-manag
 
 `bevy_action_map` takes a slightly different approach;
 storing a dense array of actions x slots,
-constructed as a shared, compiled `Plan` from an outer map-like datastructure.
+constructed as a shared, compiled `Plan` from an outer map-like data structure.
 
 `bevy_enhanced_input` by contrast represents these bindings implicitly,
 directly in the ECS.
@@ -309,11 +309,11 @@ pub struct InputMap {
     /// These are Option-wrapped in order to allow empty slots,
     /// and this field is private, in order to allow users to enforce
     /// invariants around the number of "slots" or "columns" on bindings.
-    /// 
+    ///
     /// Making this field private is also useful because it allows us
     /// to keep `ActionId` as a private mechanism, see WM4's
     /// discussion on `ActionPath`.
-    /// 
+    ///
     // Note that this is complicated by WM2
     action_bindings: BTreeMap<ActionId, Vec<Option<BindingRow>>>,
     // See WM4 for other fields on this type
@@ -355,12 +355,12 @@ as that would propagate into the `InputMap` type, and make it impossible to fetc
 without a whole whack of incidental complexity.
 
 The selected `Vec<Option<BindingRow>>` design, with private fields, configuration,
-and runtime-enforced invariants. 
+and runtime-enforced invariants.
 This offers a reasonable compromise between enforced strictness and flexibility, at the cost of some complexity.
 However, because we want to make this field private *anyways* (see WM4),
 the cost is amortized across these design choices.
 
-#### WM2: What about local multiplayer? 
+#### WM2: What about local multiplayer?
 
 **Status:** Proposed
 
@@ -369,7 +369,7 @@ on the same computer, using distinct sets of inputs to control different charact
 
 This complicates *everything*, by removing the assumption that there is exactly one input mapping to worry about.
 
-While the most common case is seperate input devices (mostly gamepads) per player,
+While the most common case is separate input devices (mostly gamepads) per player,
 local multiplayer that shares a keyboard is a real niche use case that would be nice to support.
 
 Note that action-driven bots (A8) pose similar challenges: they require distinct action states,
@@ -434,7 +434,7 @@ while allowing us to serialize per-player input bindings.
 
 In contrast to the shared input map, each player needs their own distinct `ActionState` (D4),
 tracking which actions are pressed, their value, what's disabled (D5) etc.
-This is stored as a component on each entity, as  the `PlayerId` required to map players to their bindings.
+This is stored as a component on each entity, as the `PlayerId` required to map players to their bindings.
 
 The device-to-player mapping is discussed in I21, while stable device identity is complication I12.
 
@@ -457,7 +457,7 @@ this practice tends to lead to serious problems with respect to the player entit
 What happens when the player dies and their entity is despawned?
 How can we check and set our keybindings in menus, when the player is not spawned?
 
-`bevy_action_map` uses a more elaborate design, splitting input map storage, to accomodate its context-centric binding compilation approach:
+`bevy_action_map` uses a more elaborate design, splitting input map storage, to accommodate its context-centric binding compilation approach:
 
 1. `InputContextPlan<C>`: one resource per context type, tracks the default input bindings declared for that context.
 2. `Overrides`: a struct that tracks player-specific customization of the input map, intended to be stored in your own settings resource.
@@ -468,7 +468,7 @@ There is no single source of truth for "what key bindings are set": we must aggr
 
 BEI takes yet another approach, storing the mapping in the entity graph:
 
-1. At the top level, we have a context entity, with context of type `C` holding the actions that are associated with it via an `Actions<C>` relationship. 
+1. At the top level, we have a context entity, with context of type `C` holding the actions that are associated with it via an `Actions<C>` relationship.
 2. Beneath that, we have our action entities, with `Action<A>`, tracking the bindings for that action via a `Bindings` relationship.
 3. At the bottom, we have each of our binding entities, with a `Binding` enum component.
 
@@ -483,7 +483,7 @@ rely on fundamentally global knowledge, operating across contexts and players.
 Keeping all of the information in a single place makes this very straightforward,
 while the standard Rust nature of the setup improves robustness and makes documentation and comprehension easy.
 
-Changing the input bindings is a simple struct mutation (no seperate `Overrides` concept required, no ECS operations),
+Changing the input bindings is a simple struct mutation (no separate `Overrides` concept required, no ECS operations),
 and these mutations made can be serialized directly (see WM4, R8 and R9).
 
 However, being able to check the state of each action (e.g. "is Jump pressed") on the same entity as the player
@@ -501,7 +501,7 @@ but the lifecycle issues created by that approach make it a footgun in practice.
 Storing the *input map* in a resource avoids that,
 while tracking *action state* on entity-bound components makes sense: despawned entities should not be taking actions.
 
-Similar care must be taken for the actions of bots (A8), to ensure that input move the active player, not their synthetic peers!
+Similar care must be taken for the actions of bots (A8), to ensure that input moves the active player, not their synthetic peers!
 
 #### WM4: How is this data structure serialized?
 
@@ -513,7 +513,7 @@ On paper, this is simple: just slap some `serde` derives on your types and you'r
 Unfortunately, if you complicate the design of your core data structure, this can get much, much harder.
 
 **Prior art:** Early versions of LWIM did exactly that: just serialize some plain old data.
-However, later versions, in an attempt to solve input-device extensability (I17),
+However, later versions, in an attempt to solve input-device extensibility (I17),
 swapped to a trait-based design.
 This worked great for the runtime logic, but badly complicated both performance and serialization.
 
@@ -557,7 +557,7 @@ LWIM did this by recording actions as `enum`s: with custom `PartialEq` and `Hash
 for actions which store data (otherwise `Move(-1.)` does not give you the same lookup as `Move(1.)`).
 
 This is something of a mess, and because of our choice in WA1, we cannot do the same here.
-Instead, we are forced into two different representations of our keys: the ephemeral `Actionid` of  a tiny `ActionId`, as defined in WA1, and at rest, an `ActionPath`, following `bevy_action_map`.
+Instead, we are forced into two different representations of our keys: the ephemeral `Actionid` of a tiny `ActionId`, as defined in WA1, and at rest, an `ActionPath`, following `bevy_action_map`.
 
 An `ActionPath` is a simple newtype over a string,
 generated, by default, from the type path of the `Action`,
@@ -649,7 +649,7 @@ See I20 for more discussion on this point.
 sanitized abstraction over input: representing the *intent* of a player.
 
 To actually translate them into changes in the game world, the application author must write code
-that takes actions as inputs, and turns it into mutataions of the ECS state.
+that takes actions as inputs, and turns it into mutations of the ECS state.
 
 What should that look like?
 
@@ -695,7 +695,7 @@ struct ActionStatus {
   /// The value contained in each action, if the action is active.
   ///
   /// Actions can be thought of as "virtual inputs", abstracted over input devices.
-  /// 
+  ///
   /// To treat inactive actions as if they were their "released" or null form,
   /// call `.unwrap_of_default()` on this field's value.
   value: Option<InputValue>,
@@ -719,7 +719,7 @@ enum ActionLifecycle {
   /// Some relevant inputs have been detected.
   ///
   /// This might be an input that must be held, a gesture arena,
-  /// a multi-step action or something 
+  /// a multi-step action or something
   Tentative,
   /// All of the relevant inputs are active
   Active,
@@ -732,7 +732,7 @@ For each of the main edges:
 - Going from `Tentative` to `Active` emits a `Fired` event.
 - Going from `Active` to `Inactive` emits a `Completed` event.
 - Going from `Inactive` to `Active` directly *also* emits a `Fired` event, as distinguishing these cases for a single action is never needed.
-- Going from `Tentative` to `Inactive` emits a `Cancelled` event.
+- Going from `Tentative` to `Inactive` emits a `Canceled` event.
 - Going from `Active` to `Tentative` is impossible.
 
 Disabling requires its own set of events:
@@ -746,16 +746,16 @@ Transitions from a state to the same state never emit events.
 This state machine may be complicated later (in terms of library development) by tracking progress through each of these states: things like hold durations or active durations after the action is pressed (see I19),
 but the central states and the events emitted on each edge can remain consistent.
 
-Each of these action events are entity-targeted, and contain the following information:
+Each of these action events is entity-targeted, and contains the following information:
 
 ```rust
 #[derive(Event, EntityEvent)]
 struct Fired<A: Action> {
   /// The entity whose actions this event is about
   entity: Entity,
-  /// When, by the Time clock, this event occured.
+  /// When, by the Time clock, this event occurred.
   ///
-  /// This information is derived from timing information carried by the input 
+  /// This information is derived from timing information carried by the input
   /// events that created this event, see I2.
   timing: Instant,
   _phantom: PhantomData<A>,
@@ -775,28 +775,28 @@ making them easier to work with and reason about.
 
 Enabling and disabling actions is inherently tied up in this:
 being able to toggle whole *categories* of actions contextually is a core job of an input manager in many complex applications.
-For example, you might want to swap to "car controls" in a FPS game, or a set of mesh-editing hot keys in an editor,
+For example, you might want to swap to "car controls" in an FPS game, or a set of mesh-editing hot keys in an editor,
 or fully disabling all player actions in a multiplayer game while the menu screen is up, as the game cannot simply be paused.
 
 **Prior art:** LWIM groups actions by type, with each set of action getting its own enum, input map, copy of the plugin and so on.
-This is simple and would allow heterogenous action definition (e.g. libraries), but leads to difficulties, as clashing inputs from across definitions
+This is simple and would allow heterogeneous action definition (e.g. libraries), but leads to difficulties, as clashing inputs from across definitions
 cannot be detected.
 
 Enabling and disabling actions within LWIM can be done in any of *four* different ways, from coarse to fine:
- 
+
 1. Disable all action types by adding a run condition on `InputManagerSystem::Update`, which skips updating every `ActionState` in the app.
 2. Disable a single action type by adding a run condition on `TickActionStateSystem::<A>`. This prevents actions of type `A` from getting any new updates to their state.
 3. Disable a single instance of `ActionState<A>`, by calling `ActionState::disable()`.
 4. Disable a single action within a single instance, by calling `ActionState::disable_action(&action)`.
 
 Similar levels of complexity and nuance are found in BEI and BAM.
-The idea of a "context" lie at the core of both crates, defining a set of related actions that can be toggled on or off as a set.
+The idea of a "context" lies at the core of both crates, defining a set of related actions that can be toggled on or off as a set.
 
 In both cases, every action is defined as belonging to exactly one context, and contexts cannot be nested.
 Each action in a context can be enabled/disabled as a group,
-and individual actions can be toggled seperately as well.
+and individual actions can be toggled separately as well.
 
-Neither offer any additional helpers to make enabling and disabling actions and contexts based on game state easier,
+Neither offers any additional helpers to make enabling and disabling actions and contexts based on game state easier,
 although BAM has extremely clear semantics for what exactly disabling *does*.
 
 Both crates also have a notion of "context priority", which controls which actions take effect *first*,
@@ -809,7 +809,7 @@ See D6 for more discussion on this point.
 2. Every action belongs to at most one context.
 3. Every action in a context can be enabled or disabled easily.
 
-To make this work, we need to record how actions correspond to contexts, 
+To make this work, we need to record how actions correspond to contexts.
 Tracking this on `InputMap` is the most natural: simply maps `ActionId` to a `ContextId`.
 Actions belong to at most one context, and missing values represent actions that do not belong to a specific context,
 allowing users to opt out of this concept completely if desired (e.g. for learning).
@@ -817,11 +817,11 @@ allowing users to opt out of this concept completely if desired (e.g. for learni
 The other thing that we must track is the disabled state of each action and context.
 That's simple enough, but belongs to each action *instance*, not the action as a whole.
 As a result, it belongs on the `ActionState` component for each entity (see D4 and WM2).
-Tracking both disabled *actions* seperately from disabled *contexts* is useful,
+Tracking both disabled *actions* separately from disabled *contexts* is useful,
 as it allows us to ensure that actions disabled for reasons *other* than their context do not become re-activated when their context activates.
 Consider a passive that disables one of your conditional moves, for example.
 
-Note that local multiplayer adds another wrinkle: the disabling maps must be also be keyed by owner, see WM2.
+Note that local multiplayer adds another wrinkle: the disabling maps must also be keyed by owner, see WM2.
 
 Contexts use a runtime `ContextId` identifier, with a stable path and a custom type,
 following the exact same pattern as actions (WA1) and players (WM2).

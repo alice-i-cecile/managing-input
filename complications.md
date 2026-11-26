@@ -33,7 +33,7 @@ KEYBOARD LANGUAGES.
 **Solution:** Way back in WI2, we promised an `InputTimestamp` type.
 
 In theory, this is a good, uncontroversial idea.
-Implementation however is somewhat tricky.
+Implementation, however, is somewhat tricky.
 
 There are two core problems:
 
@@ -199,7 +199,7 @@ enum ModifierKey {
 }
 ```
 
-See WI4 for discusssion on how chords are defined more broadly.
+See WI4 for discussion on how chords are defined more broadly.
 
 #### I17: How do we make the set of possible input devices extensible?
 
@@ -283,7 +283,7 @@ Instead, split them like so:
 | Chords               | Ctrl + S                               | Baked into the `Binding` type                                           | Input mapping     | Foundational input primitive, and clashes must be resolved holistically                                           |
 | Press patterns       | Press, hold, tap, release              | Declared on the action at registration, with enum variants              | Input mapping     | Very complex and flexible, and hold vs tap vs release etc is tied to the *meaning* of each action, not rebindable |
 | Combos and cooldowns | Fighting games                         | Game-specific logic, derived from action events                         | Game logic        | Timing details etc are very sensitive; can be derived entirely from action-level events                           |
-| Input thresholds     | Gamepad trigger thresholds, dead zones | Throttle and Axis control variants, with global and per-device settings | Input unification | Accessibility setting, and often driven by device normalization                                                   |
+| Input thresholds     | Gamepad trigger thresholds, deadzones | Throttle and Axis control variants, with global and per-device settings | Input unification | Accessibility setting, and often driven by device normalization                                                   |
 | Input filters        | Sticky keys, repeat suppression        | Global setting in bevy_input                                            | Input unification | Accessibility setting, should be uniform across inputs                                                            |
 | Gestures             | Swipe left, pinch-to-zoom              | Gesture state machines                                                  | Raw input         | Needs to be fed *in* to bevy_input, shape of gestures varies                                                      |
 
@@ -295,19 +295,19 @@ Overloaded actions on the same control that vary by press pattern require carefu
 
 **Status:** Proposed
 
-**Problem:** Modifying raw input values is useful for device calibration (drift, dead zones), sanitization (clamping), player preferences (inverted vertical aim, sensitivity) and gameplay effects.
+**Problem:** Modifying raw input values is useful for device calibration (drift, deadzones), sanitization (clamping), player preferences (inverted vertical aim, sensitivity) and gameplay effects.
 
 **Prior art:** BEI has a collection of component-based [`InputModifier`s](https://docs.rs/bevy_enhanced_input/latest/bevy_enhanced_input/modifier/trait.InputModifier.html), which perform these operations on both actions and inputs. `bevy_input` has basic deadzone support, and LWIM has a collection of [input processors](https://docs.rs/leafwing-input-manager/latest/leafwing_input_manager/input_processing/dual_axis/enum.DualAxisProcessor.html).
 
 **Solution:** These are performing three different roles, and do not need or warrant a shared abstraction with its associated complexity.
 Splitting these value-modifying operations structurally also helps ensure that the order in which they are applied is automatically reasonable: sanitize first!
 
-Device calibration and sanitization should be handled by `bevy_input`: dead zones, stick drift, clamping, unit conversions for mouse scroll wheel etc, often with per-device settings.
+Device calibration and sanitization should be handled by `bevy_input`: deadzones, stick drift, clamping, unit conversions for mouse scroll wheel etc, often with per-device settings.
 
 Player preferences should be serialized beside the input map, as a bounded set of "tunables" (borrowing from `bevy_action_map`'s [`Tunable`](https://docs.rs/bevy_action_map/latest/bevy_action_map/mapping/struct.Tunable.html)) for values such as "invert axis", "sensitivity" or `PressPattern` changes for accessibility (see I19).
 This allows them to be saved and loaded smoothly, using the same serialization mechanisms.
 
-More gameplay-specific effects, such as applying smoothing or fancy deadzone and snapping shapes belong at the gameplay logic level, and should be hand-authored by application devs.
+More gameplay-specific effects, such as applying smoothing or fancy deadzone and snapping shapes, belong at the gameplay logic level, and should be hand-authored by application devs.
 These should be taught through practical, scoped usage examples.
 
 #### I21: Mapping input devices to players
@@ -333,7 +333,7 @@ Persistent device identifiers (which work to at least some degree across disconn
 
 **Solution:** TODO
 
-#### M2: How do we deal with the same input meaning different things to two active contexts? 
+#### M2: How do we deal with the same input meaning different things to two active contexts?
 
 **Status:** TODO
 
@@ -493,7 +493,7 @@ E.g. ARPGs
 
 ### Rebinding the Map
 
-#### R1: How do we save the mapping to disk? 
+#### R1: How do we save the mapping to disk?
 
 **Status:** TODO
 
@@ -538,7 +538,7 @@ explicitly in the input map.
 
 **Solution:** TODO
 
-#### R4: How can libraries expose their actions to applications in order to make them rebindable? 
+#### R4: How can libraries expose their actions to applications in order to make them rebindable?
 
 **Status:** TODO
 
@@ -548,7 +548,7 @@ explicitly in the input map.
 
 **Solution:** TODO
 
-#### R5: With respect to input rebinding menus, how much should Bevy itself ship? 
+#### R5: With respect to input rebinding menus, how much should Bevy itself ship?
 
 **Status:** TODO
 
@@ -568,7 +568,7 @@ explicitly in the input map.
 
 **Solution:** TODO
 
-#### R7: Is there a one-to-one correspondence between actions and what players can rebind? 
+#### R7: Is there a one-to-one correspondence between actions and what players can rebind?
 
 **Status:** TODO
 
@@ -590,11 +590,11 @@ Southpaw, Blender-style controls, ESDF inputs and so on.
 **Prior art:** LWIM handles this very simply: simply construct an `InputMap` however you want,
 typically via a method or three on your `Action` enum.
 
-BEIs examples suggest using a settings struct (see WM4 prior art), with a `Default` trait impl,
+BEI's examples suggest using a settings struct (see WM4 prior art), with a `Default` trait impl,
 although constructors could obviously be used there too.
 
 `bevy_action_map` has a distinction between the default set of action bindings,
-and a seperate [`Preset`](https://docs.rs/bevy_action_map/latest/bevy_action_map/preset/struct.Preset.html) type,
+and a separate [`Preset`](https://docs.rs/bevy_action_map/latest/bevy_action_map/preset/struct.Preset.html) type,
 which overrides the default settings, and can later be overridden in turn by the player's own settings.
 
 This distinction seems odd at first, but BAM's defaults are created by the bindings added to each context via code.
@@ -613,8 +613,8 @@ Thankfully, we already need a way to serialize and deserialize an input binding:
 
 ```rust
   /// An [`InputBinding`] as written to a file.
-  /// 
-  /// Used for both the seralization of [`InputMap`] data structures
+  ///
+  /// Used for both the serialization of [`InputMap`] data structures
   /// and the construction of [`BindingPreset`] types.
   ///
   /// Contains stable paths only for ease of serialization; no runtime ids.
@@ -633,7 +633,7 @@ Thankfully, we already need a way to serialize and deserialize an input binding:
       /// The "slot" (e.g. first vs second binding) that stores this binding.
       pub slot: u16,
       /// Where this input binding came from.
-      /// 
+      ///
       /// In a preset, this is e.g. `BindingOrigin::Preset("default")`.
       /// See R9 for more information on why this field is useful.
       pub origin: BindingOrigin,
@@ -651,12 +651,12 @@ Then, the preset is basically just a pile of serializable bindings:
 pub struct BindingPreset {
   /// A stable identity for this preset,
   /// which should map onto where it is stored.
-  /// 
+  ///
   /// For example: "player/default", "southpaw", "mod.steam_deck".
   pub path: PresetPath,
   /// The input bindings set by this preset.
   ///
-  /// Note that this is sparse: 
+  /// Note that this is sparse:
   pub rows: Vec<InputBinding>,
 }
 ```
@@ -699,7 +699,7 @@ fn define_default_input_bindings(mut input_map: ResMut<InputMap>){
 **Problem:** Suppose a player defines some custom keybindings in your game.
 
 Your game releases a new version, removing an action that was added, renaming another, and adding a new one.
-How to you avoid forcing the user to remember and reset all of their key bindings?
+How do you avoid forcing the user to remember and reset all of their key bindings?
 
 This is a minor problem for games, but *much* more important for complex, long-lived applications, like editors.
 
@@ -719,12 +719,12 @@ but if it's only added later, earlier versions are orphaned.
 ```rust
 pub struct InputMap {
     /// Which version of the application produced this input map.
-    /// 
+    ///
     /// This field is written by the application: release numbers or commit hashes are typical,
     /// although encoding more complex information such as the set of active extensions can also be useful.
     /// It is serialized, and used to aid migrations.
     pub app_version: Version,
-    /// The version of the `bevy_input_map` crate used to record this hash.
+    /// The version of the `bevy_actions` crate used to record this hash.
     pub schema_version: Version,
     /// The preset input map that these bindings were originally derived from.
     ///
@@ -733,7 +733,7 @@ pub struct InputMap {
     ..
 }
 
-/// We need more flexiblity than a simple number,
+/// We need more flexibility than a simple number,
 /// but surely we can do better than a raw string.
 enum Version {
   /// A numbered, released version
@@ -742,7 +742,7 @@ enum Version {
     minor: Option<u32>,
     patch: Option<u32>,
   },
-  /// An arbitary identifier string for a release.
+  /// An arbitrary identifier string for a release.
   ///
   /// Commit hashes are common here, but stranger versioning schemes can be shoe-horned in here too.
   Identifier(String),

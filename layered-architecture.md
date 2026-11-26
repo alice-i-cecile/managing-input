@@ -30,7 +30,7 @@ We can think about this as four distinct layers, each building on the last:
   - looks up the inputs bound to a given action when needed for user-facing prompts (e.g. hotkey hints)
 
 As you move up the layers, the lower layers should become invisible to you:
-instead of worrying about touch support and chords and conflicting inputs and keyboard layouts in every widget you write, simply make an action and trust that it has been handled well. 
+instead of worrying about touch support and chords and conflicting inputs and keyboard layouts in every widget you write, simply make an action and trust that it has been handled well.
 
 By moving more of the logic traditionally handled by input mappers into our input unification layer (`bevy_input`),
 we can simplify their design substantially, and make it easy to both create and swap input mapping solutions to fit the tastes and needs of each project.
