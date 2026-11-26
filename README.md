@@ -18,3 +18,17 @@ This repo is divided into multiple files to make digesting (and editing) the des
 - [Data Structures](data-structures.rs): an at-a-glance collection of the intended final form of the most important data structures, as they would appear in our new library
 - [Complications](complications.md): assorted *additional* frustations that should be considered during design and implementation
 - [Work Plan](work-plan.md): a loose plan for how we can turn this design into library code, in reviewable chunks that get a working (if basic) input manager into user hands ASAP
+
+## Helping out
+
+This is a collaborative design doc!
+Because this is very complex and large-scope,
+I've opted for a git repo, rather than the traditional HackMd,
+which should make both collaborating and detailed discussion easier.
+
+Don't be intimidated though!
+I'd like your fixes, complaints, thoughts, etc.
+Just submit a PR so we can debate designs and .
+
+Broadly I would like to avoid fine-grained planning (just start writing code),
+but critical complications or fundamental disagreements should be resolved before we begin, even if we're simply agreeing to disagree.
