@@ -15,7 +15,8 @@ The `Sidequest` items offer useful but niche supporting functionality, and can t
 
 ## Step 1: Unified input
 
-Create unified input enums inside of `bevy_input`. See WI2 for details.
+1. Create unified input enums inside of `bevy_input`. See WI2 for details.
+2. Give each input device its own entity, like `Gamepad`, to improve conistency and flexibility.
 
 ## Step 2: MVP
 
@@ -155,3 +156,7 @@ Ensure that inputs are released when window focus is lost.
 Reuse `require_reset` flag for actions from D4.
 
 See I5 for discussion.
+
+## Side Quest L: Layered Architecture
+
+Move and adapt the [Layered Architecture](layered-architecture.md) design doc into the library docs of `bevy_input`.
