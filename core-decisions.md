@@ -678,7 +678,7 @@ while push-style APIs are very convenient and allow users to write complex logic
 To avoid divergence between these APIs, we should stick to the state-based pull-style API as the primary record of truth,
 with push-style events derived from it using systems which run just after it is updated during the input-mapping step.
 
-This is recorded in the `ActionState` of each actor, tracked as a component on the entity that is actually acting (see WM3, WM2).
+This is recorded in the `ActionState` of each actor, tracked as a component on the entity that is actually acting (see WM2, WM3).
 
 ```rust
 /// A collection of [`ActionStatus`], representing the state of each action for a given actor.
