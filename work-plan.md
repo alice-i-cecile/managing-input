@@ -16,7 +16,7 @@ The `Sidequest` items offer useful but niche supporting functionality, and can t
 ## Step 1: Unified input
 
 1. Create unified input enums inside of `bevy_input`. See WI2 for details.
-2. Give each input device its own entity, like `Gamepad`, to improve conistency and flexibility.
+2. Give each input device its own entity, like `Gamepad`, to improve conistency and flexibility. See WI4.
 
 ## Step 2: MVP
 
