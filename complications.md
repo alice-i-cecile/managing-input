@@ -199,7 +199,7 @@ enum ModifierKey {
 }
 ```
 
-See WI5 for discusssion on how chords are defined more broadly.
+See WI4 for discusssion on how chords are defined more broadly.
 
 #### I17: How do we make the set of possible input devices extensible?
 
@@ -244,9 +244,9 @@ enum ButtonControl {
 
 Add helpers for common cases, such as WASD or arrow keys.
 
-`impl Into` conversions (see WI3) are provided, but only for obvious, lossless cases in the same dimension, to avoid typos or mistakes.
+`impl Into` conversions (see WI2) are provided, but only for obvious, lossless cases in the same dimension, to avoid typos or mistakes.
 
-Many-to-one inputs, such as virtual DPads or chords, cause challenges with memory usage and complexity for a high-frequency type, and are deliberately excluded from the `Control` types. See WI5 for more discussion!
+Many-to-one inputs, such as virtual DPads or chords, cause challenges with memory usage and complexity for a high-frequency type, and are deliberately excluded from the `Control` types. See WI4 for more discussion!
 
 #### I19: How do we recognize more complex inputs? Where does this logic live?
 

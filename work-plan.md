@@ -16,7 +16,7 @@ The `Sidequest` items offer useful but niche supporting functionality, and can t
 ## Step 1: Unified input
 
 1. Create unified input enums inside of `bevy_input`. See WI2 for details.
-2. Give each input device its own entity, like `Gamepad`, to improve conistency and flexibility. See WI4.
+2. Give each input device its own entity, like `Gamepad`, to improve conistency and flexibility. See WI3.
 
 ## Step 2: MVP
 
@@ -46,7 +46,7 @@ Make sure that observers work as expected.
 
 ## Phase 4: Chords
 
-1. Add support for chorded inputs (WI5).
+1. Add support for chorded inputs (WI4).
 2. Handle clashing inputs simply, according to the longest input, then by `ActionId` (stable but arbitrary).
 3. Add an optional priority value to `Action`.
 4. Optimize checking for clashes using caching.

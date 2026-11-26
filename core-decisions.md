@@ -29,13 +29,17 @@ The questions that drive these decisions follow below, with the following struct
   
 Extend as needed by real users (e.g. 3D inputs for VR).
 
-#### WI2: How do we handle streams of input messages from across diverse input devices?
+#### WI2: How do we handle streams of input messages from across diverse input devices, and what do we bind to our actions?
 
 **Status:** Proposed
 
 **Problem:** Bevy (as of 0.20) provides a large number of input message types, split by devices. This is very inconvenient for input mapping libraries, as they must recombine these streams and pass them around, and any relative ordering is lost (where was the mouse when it was clicked?).
 
+We can't bind input *messages* to actions: they contain information such as device identity and magnitude that simply isn't appropriate.
+
 **Prior art:** LWIM's former [`InputStreams`](https://docs.rs/leafwing-input-manager/0.9.0/leafwing_input_manager/input_streams/struct.InputStreams.html) type is indicative of the kind of messy glue code required. You can do the same thing in various other ways, but this core input unification problem must be solved in *every* input mapping library.
+
+LWIM allows users to bind `KeyCode`, `GamepadButton`, `MouseButton` and so on, through e.g. `Buttonlike` trait impls, taking an `impl Buttonlike` at the call sites. Previous versions of LWIM took an `impl Into<UserInput>` argument, allowing similar ergonomics.
 
 **Solution:** Create a unified `InputMessage` type that libraries which care about holistic views of user input read:
 
@@ -84,15 +88,7 @@ enum InputValue {
 }
 ```
 
-#### WI3: What do we actually bind to our actions?
-
-**Status:** Proposed
-
-**Problem:** We can't bind input *messages* to actions: they contain information such as device identity and magnitude that simply isn't appropriate.
-
-**Prior art:** LWIM allows users to bind `KeyCode`, `GamepadButton`, `MouseButton` and so on, through e.g. `Buttonlike` trait impls, taking an `impl Buttonlike` at the call sites. Previous versions of LWIM took an `impl Into<UserInput>` argument, allowing similar ergonomics.
-
-**Solution:** Use unifying enums with `impl Into` ergonomics, defined one level below `Control`, split by shape.
+Use unifying enums with `impl Into` ergonomics, defined one level below `Control`, split by shape.
 This keeps nice ergonomics, but prevents users from accidentally binding e.g. mouse motion to jump.
 
 To sketch this more fully:
@@ -120,9 +116,9 @@ enum ButtonControl {
 }
 ```
 
-Note that I18 and WI5 discuss this problem further: covering converted and more complex kinds of controls.
+Note that I18 and WI4 discuss this problem further: covering converted and more complex kinds of controls.
 
-#### WI4: How do we handle multiple input devices of the same kind?
+#### WI3: How do we handle multiple input devices of the same kind?
 
 **Status:** Consensus
 
@@ -132,7 +128,7 @@ Note that I18 and WI5 discuss this problem further: covering converted and more 
 
 **Solution:** Do the same for mice and keyboards, assigning each an entitity. Where no identifying information is provided, treat all devices of the same class as a single device.
 
-#### WI5: How are composite inputs, such as chords, represented?
+#### WI4: How are composite inputs, such as chords, represented?
 
 **Status:** Proposed
 
@@ -635,7 +631,7 @@ app.add_context::<C>(|c|
 ```
 
 **Solution:** At the heart of the API, we have a single method: `InputMap::bind(action, input)`.
-To make this pleasant to use, `action` is an `impl Action` (WA1) argument, while `input` is an `impl Into<Control>` variant (see WI3).
+To make this pleasant to use, `action` is an `impl Action` (WA1) argument, while `input` is an `impl Into<Control>` variant (see WI2).
 This gives us a very terse, simple API:
 
 ```rust
