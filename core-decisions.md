@@ -18,7 +18,7 @@ The questions that drive these decisions follow below, with the following struct
 
 **Status:** Proposed
 
-**Problem:** Not all inputs are created equal. Questions that you might ask about a button make no sense to ask about a throttle, and questions about a gamepad stick don't apply. See WI6 for questions about treating certain classes of input "as if" they belonged to another class however.
+**Problem:** Not all inputs are created equal. Questions that you might ask about a button make no sense to ask about a throttle, and questions about a gamepad stick don't apply. See I18 for questions about treating certain classes of input "as if" they belonged to another class however.
 
 **Prior art:** LWIM and BEI split these into three categories based on the dimensionality of the input, calling them "buttonlike" (key presses, gamepad buttons, mouse clicks), "axislike" (triggers, throttles, scroll wheels, steering wheel) and "dual-axislike" (gamepad sticks).
 
@@ -120,21 +120,9 @@ enum ButtonControl {
 }
 ```
 
-Note that WI6 and WI7 discuss this problem further: covering converted and more complex kinds of controls.
+Note that I18 and WI5 discuss this problem further: covering converted and more complex kinds of controls.
 
-#### WI4: How do we make the set of possible input devices extensible?
-
-**Status:** Proposed
-
-**Problem:** The world of input devices is limitless. VR gesture recognition? Dance pads? Telepathic theremin? What if our users want to do something *weird*?
-
-**Prior art:** LWIM badly complicated its data model by moving to e.g. `Buttonlike` traits and trait objects to try and support this eventuality. `winit` and `gilrs` both expose `Custom(u16)` variants in their enum to account for this sort of problem.
-
-**Solution:** Just add `Custom` variants to each control type, with custom inputs that can be registered to provide the appropriate metadata.
-
-Key these by `InputId`, hashed from a path, following the design in `WA1`.
-
-#### WI5: How do we handle multiple input devices of the same kind?
+#### WI4: How do we handle multiple input devices of the same kind?
 
 **Status:** Consensus
 
@@ -144,42 +132,7 @@ Key these by `InputId`, hashed from a path, following the design in `WA1`.
 
 **Solution:** Do the same for mice and keyboards, assigning each an entitity. Where no identifying information is provided, treat all devices of the same class as a single device.
 
-#### WI6: How can we construct inputs from inputs of a different shape?
-
-**Status:** Proposed
-
-**Problem:** It's common to want to emulate input devices of a different shape: treating WASD as if it were a `DualAxis` control, using gamepad quadrants as if they were buttons, treating gamepad triggers like ordinary buttons.
-
-**Prior art:** LWIM defines custom input types for this, e.g. `VirtualDpad`, which implement the correct trait for the shape of the input. BEI implicitly converts, using [`ActionValue::convert`](https://docs.rs/bevy_enhanced_input/latest/bevy_enhanced_input/action/value/enum.ActionValue.html#method.convert), following Unreal. These mappings are constructed using modifiers, e.g. four `Swizzle` and `Negate` modifiers for the WASD case.
-
-**Solution:** Add explicit enum variants for each one-to-one conversion in the `*Control` enums, storing the original source data. These conversions are for authoring bindings only: they are never found in `InputMessage` streams. For example:
-
-```rust
-enum ButtonControl {
-  ..
-  FromDualAxis {
-    control: DualAxisControl,
-    wedge_start: Rot2,
-    wedge_end: Rot2
-  },
-  FromThrottle {
-    control: ThrottleControl,
-    /// The input-specific threshold, below which the button is considered "pressed".
-    ///
-    /// If `None`, global settings will be used.
-    threshold: Option<f32>,
-    hysteresis: Option<f32>,
-  }
-}
-```
-
-Add helpers for common cases, such as WASD or arrow keys.
-
-`impl Into` conversions (see WI3) are provided, but only for obvious, lossless cases in the same dimension, to avoid typos or mistakes.
-
-Many-to-one inputs, such as virtual DPads or chords, cause challenges with memory usage and complexity for a high-frequency type, and are deliberately excluded from the `Control` types. See WI7 for more discussion!
-
-#### WI7: How are composite inputs, such as chords, represented?
+#### WI5: How are composite inputs, such as chords, represented?
 
 **Status:** Proposed
 
@@ -192,7 +145,7 @@ BEI has a distinct `Binding` enum, storing e.g. `Keyboard { key: KeyCode, mod_ke
 However, users can instead use the [`Chord`](https://docs.rs/bevy_enhanced_input/latest/bevy_enhanced_input/condition/chord/struct.Chord.html) condition, a component which references any number of additional action entities, triggering when all of the composite actions fire.
 This allows arbitrary flexibility, at the cost of helper action entities and complexity.
 
-Handling of the virtual d-pad class of inputs is covered in WI6.
+Handling of the virtual d-pad class of inputs is covered in I18.
 
 **Solution:** Bindings have a distinct data type from the `Control` types, which track chords via a dedicated modifier field.
 
@@ -213,72 +166,10 @@ There are a few subtle advantages of this design to note here:
 
 Helper functions and methods are added to make the common case of modifier keys (see I16) plus a primary button terse and easy.
 
-These bindings are then unified into a single enum, `InputBinding` (with the obvious `From` impls), as discussed in `WI8`.
+These bindings are then unified into a single enum, `InputBinding` (with the obvious `From` impls), as discussed in `I19`.
 See WM1 for more discussion on storing `*Binding` types.
 Arbitration of clashing (overlapping) inputs in chords is discussed in D6.
 The exact details of "when do chords fire" is in M5.
-
-#### WI8: How do we recognize more complex inputs? Where does this logic live?
-
-**Status:** Proposed
-
-**Problem:** Distinguishing between tapped, held, and flicked controls can produce rich gameplay. These types of control variations are also sometimes used for accessibility purposes, and gestures (both touch and XR) can be considered an extension of this idea.
-
-**Prior art:** LWIM does not handle these directly, but instead exposes information about the action (e.g. timing information) for gameplay logic to consume directly. BEI, drawing from Unreal's Enhanced Input, has an excellent catalogue of [conditions](https://docs.rs/bevy_enhanced_input/latest/bevy_enhanced_input/condition/index.html), which can be applied to both input bindings and actions.
-
-Combining these conditions can be tricky, with the exact behavior given by the fixed [`ConditionKind`](https://docs.rs/bevy_enhanced_input/latest/bevy_enhanced_input/condition/enum.ConditionKind.html) associated with each condition (e.g. `Down` or `Press`).
-
-The core problem here is that we need a way for a flat, data-driven list of conditions to create a boolean algebra:
-
-- **Explicit:** The action fires if any explicit condition fired, so explicit conditions form an OR group. This is the default behavior: `Down`, `Press`, `Hold`, `Tap`, and so on are explicit conditions.
-- **Implicit:** The action only fires if every implicit condition fired, so they form an AND group. `Chord`, `Combo` and `Cooldown` are implicit.
-- **Blocker:** Blockers can stop the action, regardless of any other condition. `BlockBy` is the only example.
-
-Unity's interactions (`Press`, `Hold`, `Tap`, `SlowTap`, `MultiTap`) can also be attached to either a binding or to an action, parameterized by things like "hold time".
-
-Gesture recognition typically operates by giving each gesture its own state machine, which tracks inputs and advances before reporting that a gesture has been made. See D6 for a brief discussion of gesture arenas to resolve conflicts between gestures.
-
-Fighting games have complex inputs (timing windows, directional inputs), but implementation tends to live at the game logic layer.
-
-Game-level accessibility config of this sort, when offered, typically allows users to convert holds to rapid presses or vice versa, swap between holds and toggles, or control windows for timing.
-
-`bevy_picking` various [`PointerPress`](https://docs.rs/bevy/latest/bevy/picking/events/struct.PointerPress.html) entity-targeted events for the entire lifecycle.
-
-**Solution:** Fundamentally, BEI's conditions are trying to do too much. They represent an excellent coverage of *use cases*, but they should not be solved with a single complex design.
-
-Instead, split them like so:
-
-| Category             | Examples                               | Implementation                                                          | Layer             | Why                                                                                                               |
-| -------------------- | -------------------------------------- | ----------------------------------------------------------------------- | ----------------- | ----------------------------------------------------------------------------------------------------------------- |
-| Chords               | Ctrl + S                               | Baked into the `Binding` type                                           | Input mapping     | Foundational input primitive, and clashes must be resolved holistically                                           |
-| Press patterns       | Press, hold, tap, release              | Declared on the action at registration, with enum variants              | Input mapping     | Very complex and flexible, and hold vs tap vs release etc is tied to the *meaning* of each action, not rebindable |
-| Combos and cooldowns | Fighting games                         | Game-specific logic, derived from action events                         | Game logic        | Timing details etc are very sensitive; can be derived entirely from action-level events                           |
-| Input thresholds     | Gamepad trigger thresholds, dead zones | Throttle and Axis control variants, with global and per-device settings | Input unification | Accessibility setting, and often driven by device normalization                                                   |
-| Input filters        | Sticky keys, repeat suppression        | Global setting in bevy_input                                            | Input unification | Accessibility setting, should be uniform across inputs                                                            |
-| Gestures             | Swipe left, pinch-to-zoom              | Gesture state machines                                                  | Raw input         | Needs to be fed *in* to bevy_input, shape of gestures varies                                                      |
-
-Accessibility options such as hold-versus-toggle are a per-owner override of the action's pattern, stored beside the map (WI9), not binding data.
-
-Overloaded actions on the same control that vary by press pattern require careful consideration for rebinding workflows: see R8 for more discussion.
-
-#### WI9: How should we handle clamping, rescaling, flipping etc inputs?
-
-**Status:** Proposed
-
-**Problem:** Modifying raw input values is useful for device calibration (drift, dead zones), sanitization (clamping), player preferences (inverted vertical aim, sensitivity) and gameplay effects.
-
-**Prior art:** BEI has a collection of component-based [`InputModifier`s](https://docs.rs/bevy_enhanced_input/latest/bevy_enhanced_input/modifier/trait.InputModifier.html), which perform these operations on both actions and inputs. `bevy_input` has basic deadzone support, and LWIM has a collection of [input processors](https://docs.rs/leafwing-input-manager/latest/leafwing_input_manager/input_processing/dual_axis/enum.DualAxisProcessor.html).
-
-**Solution:** These are performing three different roles, and do not need or warrant a shared abstraction with its associated complexity.
-Splitting these value-modifying operations structurally also helps ensure that the order in which they are applied is automatically reasonable: sanitize first!
-
-Device calibration and sanitization should be handled by `bevy_input`: dead zones, stick drift, clamping, unit conversions for mouse scroll wheel etc, often with per-device settings.
-
-Player preferences should be serialized beside the input map, as a bounded set of "tunables" (borrowing from `bevy_action_map`'s [`Tunable`](https://docs.rs/bevy_action_map/latest/bevy_action_map/mapping/struct.Tunable.html)) for values such as "invert axis", "sensitivity" or `PressPattern` changes for accessibility (see WI8).
-This allows them to be saved and loaded smoothly, using the same serialization mechanisms.
-
-More gameplay-specific effects, such as applying smoothing or fancy deadzone and snapping shapes belong at the gameplay logic level, and should be hand-authored by application devs.
-These should be taught through practical, scoped usage examples.
 
 ### D2: What is an action?
 
@@ -361,7 +252,7 @@ This validation makes it easy to define the set of permissible
 
 Derive macro helpers are perfectly pleasant, and should be added at some point.
 
-Inputs can be converted from one shape to another (e.g. a virtual D-pad) (WI6).
+Inputs can be converted from one shape to another (e.g. a virtual D-pad) (I18).
 However, as discussed there, this proposal suggests we should be quite explicit and conservative there,
 to avoid quiet user-space footguns and confusion.
 
@@ -431,7 +322,7 @@ pub struct InputMap {
     /// to keep `ActionId` as a private mechanism, see WM3's
     /// discussion on `ActionPath`.
     /// 
-    // Note that this is complicated by WM6
+    // Note that this is complicated by WM4
     action_bindings: BTreeMap<ActionId, Vec<Option<BindingRow>>>,
     // See WM3 for other fields on this type
     ..
@@ -483,7 +374,7 @@ the cost is amortized across these design choices.
 
 **Problem:** Once we have the mapping, we need to *put* it somewhere. Does it belong in a resource?
 A component on the player entity?
-A component on *each* player entity (see WM6)?
+A component on *each* player entity (see WM4)?
 
 Do we have a single canonical input map?
 
@@ -523,7 +414,7 @@ Keeping all of the information in a single place makes this very straightforward
 while the standard Rust nature of the setup improves robustness and makes documentation and comprehension easy.
 
 Changing the input bindings is a simple struct mutation (no seperate `Overrides` concept required, no ECS operations),
-and these mutations made can be serialized directly (see WM3, WM4 and WM5).
+and these mutations made can be serialized directly (see WM3, R8 and R9).
 
 However, being able to check the state of each action (e.g. "is Jump pressed") on the same entity as the player
 is incredibly convenient, both in systems and observers.
@@ -534,8 +425,8 @@ while input mapping remains a global resource.
 Shared or game-agnostic actions (e.g. `bevy_ui::Cancel`) belong to a spawned-by-default entity,
 called `InputRoot`. See D6 for more discussion on this point.
 
-Under a resource-based design, special care is needed to cover local multiplayer, see WM6.
-The per-player, component-based input maps simplify questions around local multiplayer (see WM6),
+Under a resource-based design, special care is needed to cover local multiplayer, see WM4.
+The per-player, component-based input maps simplify questions around local multiplayer (see WM4),
 but the lifecycle issues created by that approach make it a footgun in practice.
 Storing the *input map* in a resource avoids that,
 while tracking *action state* on entity-bound components makes sense: despawned entities should not be taking actions.
@@ -552,13 +443,13 @@ On paper, this is simple: just slap some `serde` derives on your types and you'r
 Unfortunately, if you complicate the design of your core data structure, this can get much, much harder.
 
 **Prior art:** Early versions of LWIM did exactly that: just serialize some plain old data.
-However, later versions, in an attempt to solve input-device extensability (WI4),
+However, later versions, in an attempt to solve input-device extensability (I17),
 swapped to a trait-based design.
 This worked great for the runtime logic, but badly complicated both performance and serialization.
 
 `bevy_action_map` uses a dedicated `SavedOverrides` type,
-recording deviations from the default settings (see WM4),
-and a version field (more in WM5).
+recording deviations from the default settings (see R8),
+and a version field (more in R9).
 
 BEI by contrast mostly leaves serialization up to the end user.
 The [keybinding_menu example](https://github.com/simgine/bevy_enhanced_input/blob/master/examples/keybinding_menu.rs)
@@ -626,8 +517,8 @@ should we serialize the *difference* from a preset,
 or the entire input map?
 
 Serializing the difference shrinks the storage,
-and allows us to distinguish between user-set and default values (see WM4).
-This distinction is quite helpful when attempting to migrate (see WM5).
+and allows us to distinguish between user-set and default values (see R8).
+This distinction is quite helpful when attempting to migrate (see R9).
 
 By contrast, serializing the entire map is simpler,
 allows for easier inspection (just read the whole file),
@@ -636,217 +527,10 @@ and does not require us to store and track old defaults to handle migrations.
 We think that we should prefer the simpler, more robust design and simply serialize
 the entire input map, as the size costs are insignificant.
 
-As discussed in WM5, we can preserve the benefits of provenance information by logging this
+As discussed in R9, we can preserve the benefits of provenance information by logging this
 explicitly in the input map.
 
-#### WM4: How do we handle input binding presets?
-
-**Status:** Proposed
-
-**Problem:** Default input bindings are omnipresent. How should users define these defaults?
-
-Beyond that, it's reasonably common to have *multiple* presets to start with.
-Southpaw, Blender-style controls, ESDF inputs and so on.
-
-**Prior art:** LWIM handles this very simply: simply construct an `InputMap` however you want,
-typically via a method or three on your `Action` enum.
-
-BEIs examples suggest using a settings struct (see WM3 prior art), with a `Default` trait impl,
-although constructors could obviously be used there too.
-
-`bevy_action_map` has a distinction between the default set of action bindings,
-and a seperate [`Preset`](https://docs.rs/bevy_action_map/latest/bevy_action_map/preset/struct.Preset.html) type,
-which overrides the default settings, and can later be overridden in turn by the player's own settings.
-
-This distinction seems odd at first, but BAM's defaults are created by the bindings added to each context via code.
-During this binding process, tunables and the "shape" of each action are set, causing it to function more like a schema.
-By contrast, BAM's presets are a set of diffs, like user changes to bindings, applied to *modify* the defaults.
-
-In all three cases, these defaults are typically defined in code, rather than assets.
-
-**Solution:** Code-first defaults are really convenient for getting started,
-but struggle with more complex use-cases: editor-driven changes to the defaults,
-user-defined presets, presets for mods and extensions.
-
-For those, you really want *asset*-based presets, for a *data-driven* model.
-
-Thankfully, we already need a way to serialize and deserialize an input binding:
-
-```rust
-  /// An [`InputBinding`] as written to a file.
-  /// 
-  /// Used for both the seralization of [`InputMap`] data structures
-  /// and the construction of [`BindingPreset`] types.
-  ///
-  /// Contains stable paths only for ease of serialization; no runtime ids.
-  /// Like usual, default field values can be skipped during serialization,
-  /// and redundant enums can be collapsed down to only their unambiguous interior form for brevity.
-   #[derive(Reflect, Serialize, Deserialize)]
-   pub struct BindingRecord {
-      /// The input bound to an action.
-      pub binding: InputBinding,
-      /// The action that this input is bound to.
-      pub action: ActionPath,
-      /// The owner whose actions these control bindings belong to.
-      ///
-      /// See WM6 for more information on local multiplayer.
-      pub owner: Owner,
-      /// The "slot" (e.g. first vs second binding) that stores this binding.
-      pub slot: u16,
-      /// Where this input binding came from.
-      /// 
-      /// In a preset, this is e.g. `BindingOrigin::Preset("default")`.
-      /// See WM5 for more information on why this field is useful.
-      pub origin: BindingOrigin,
-   }
-```
-
-Then, the preset is basically just a pile of serializable bindings:
-
-```rust
-/// A set of input bindings, defined in advance for users to customize.
-///
-/// The most common form is a simple default set of input bindings,
-/// but these can be used to good effect to offer a number of popular control schemes.
-#[derive(Asset, Reflect, Serialize, Deserialize)]
-pub struct BindingPreset {
-  /// A stable identity for this preset,
-  /// which should map onto where it is stored.
-  /// 
-  /// For example: "player/default", "southpaw", "mod.steam_deck".
-  pub path: PresetPath,
-  /// The input bindings set by this preset.
-  ///
-  /// Note that this is sparse: 
-  pub rows: Vec<InputBinding>,
-}
-```
-
-On the data-driven path, you load the `BindingPreset` like any other asset,
-then call `InputMap::apply_preset(path: impl Into<PresetPath>, presets: &Assets<BindingPreset>)`
-to set up your input map with the selected set of defaults.
-
-This may seem fussy for the code-only path, but that's nothing a couple helpers can't solve.
-If you want to declare this as an asset to enable later selection / extension:
-
-```rust
-fn define_default_input_bindings(mut presets: ResMut<Assets<BindingPresets>>){
-  let default_bindings = BindingPresets::new("default")
-    .bind(KeyCode::Space, Jump)
-    .bind(KeyCode::Enter, Interact)
-    .bind(MouseButton::Primary, Shoot);
-
-  presets.add(default_bindings);
-}
-```
-
-Or to bypass the preset system completely:
-
-```rust
-/// This system must run *before* any saved player modifications to the keybindings are loaded,
-/// or they will be overwritten.
-fn define_default_input_bindings(mut input_map: ResMut<InputMap>){
-  input_map
-    .bind(KeyCode::Space, Jump)
-    .bind(KeyCode::Enter, Interact)
-    .bind(MouseButton::Primary, Shoot);
-}
-```
-
-#### WM5: How can app developers migrate their input maps between versions of the game?
-
-**Status:** Proposed
-
-**Problem:** Suppose a player defines some custom keybindings in your game.
-
-Your game releases a new version, removing an action that was added, renaming another, and adding a new one.
-How to you avoid forcing the user to remember and reset all of their key bindings?
-
-This is a minor problem for games, but *much* more important for complex, long-lived applications, like editors.
-
-**Prior art:** LWIM does not particularly consider this problem. BEI leaves serialization to the end user.
-
-`bevy_action_map` does best, with a numeric version field for the `action_map_version`.
-This covers the version of the *action mapping* crate (useful, in case the schema/strategy changes),
-but does not cover the more common case where the 
-
-**Solution:**
-
-The most important thing we need to do, immediately, is record the exact version of both the user app *and* the library that was used,
-in the serialized data.
-With that in place, migration *can* be solved without guessing,
-but if it's only added later, earlier versions are orphaned.
-
-```rust
-pub struct InputMap {
-    /// Which version of the application produced this input map.
-    /// 
-    /// This field is written by the application: release numbers or commit hashes are typical,
-    /// although encoding more complex information such as the set of active extensions can also be useful.
-    /// It is serialized, and used to aid migrations.
-    pub app_version: Version,
-    /// The version of the `bevy_input_map` crate used to record this hash.
-    pub schema_version: Version,
-    /// The preset input map that these bindings were originally derived from.
-    ///
-    /// Serializing this allows us to make a good guess for how to handle renamed or added actions.
-    pub preset: Option<String>,
-    ..
-}
-
-/// We need more flexiblity than a simple number,
-/// but surely we can do better than a raw string.
-enum Version {
-  /// A numbered, released version
-  Release {
-    major: u32,
-    minor: Option<u32>,
-    patch: Option<u32>,
-  },
-  /// An arbitary identifier string for a release.
-  ///
-  /// Commit hashes are common here, but stranger versioning schemes can be shoe-horned in here too.
-  Identifier(String),
-}
-```
-
-It's also helpful to record *where* bindings came from (inspired by BAM's preset concept).
-This should be tracked on both the input map itself (see the `preset` field above),
-and on individual rows so migration schemas can make smarter decisions about how to upgrade.
-
-```rust
-/// A single binding for an action, as recorded in an [`InputMap`].
-#[derive(Reflect, Serialize, Deserialize)]
-pub struct BindingRow {
-    /// Where the binding comes from.
-    ///
-    /// This information is useful when determining how to handle migrations,
-    /// both between versions of the game, and when swapping presets.
-    pub binding_origin: BindingOrigin,
-    ..
-}
-
-/// The source of a value in a [`BindingRow`].
-#[derive(Default)]
-pub enum BindingOrigin {
-    /// Derived from the preset.
-    #[default]
-    Inherited,
-    /// Explicitly set by the user or player.
-    ///
-    /// When migrating, you should avoid changing these values.
-    User,
-}
-```
-
-Like usual, we can skip `BindingOrigin` data if it's `Inherited` to cut down on noise.
-
-Actually handling migrations is a fairly bespoke operation that is best left to users,
-or later in this library's lifecycle.
-To start, explicitly logging the versions and providing an example of how such a migration *could* be handled
-is sufficient.
-
-#### WM6: What about local multiplayer? 
+#### WM4: What about local multiplayer? 
 
 **Status:** Proposed
 
@@ -912,7 +596,7 @@ pub enum ActionScope {
 }
 ```
 
-Registration rejects rows whose owner does not match the action's scope (see WM7).
+Registration rejects rows whose owner does not match the action's scope (see WM5).
 
 `PlayerId` can be defined using exactly the same patterns as `ActionId` etc (WA1),
 supporting both type safety and runtime flexibility as desired,
@@ -926,7 +610,7 @@ The mapping between input devices and players must also be maintained, likely in
 We should follow BAM's strategy of expanding this beyond gamepads, as the cost is relatively low and the constistent benefits are good.
 Persistent device identifiers (which work to at least some degree across disconnects) would also help improve robutsness.
 
-#### WM7: How do users bind inputs to actions?
+#### WM5: How do users bind inputs to actions?
 
 **Status:** Proposed
 
@@ -961,7 +645,7 @@ input_map.bind(Jump, KeyCode::Space);
 `bind` defines bindings across *all* registered players (or once, for shared actions);
 use `bind_for` to bind actions to only a single player.
 
-Unfortunately, it does not make sense to bind arbitrary inputs to each action: each action has its own shape (WI1, WI6).
+Unfortunately, it does not make sense to bind arbitrary inputs to each action: each action has its own shape (WI1, I18).
 Similarly, some input bindings might overlap existing bindings, in a way that we should reject at the time of binding.
 We should return a `Result` from our `.bind` APIs, diverging from existing input management crates, which are more permissive,
 and lock down access to the internal fields of `InputMap` to ensure that these invariants are correctly upheld.
@@ -985,7 +669,7 @@ Actions are not grouped into contexts at input binding time (see D5),
 nor are the properties of each action (conditions, in BEI's terms) defined there.
 Instead, this information about each action belongs to is defined on that *action*,
 registered in the `InputMap` with the action.
-See WI9 for more discussion on this point.
+See I20 for more discussion on this point.
 
 ### D4: How does the game logic layer respond to actions?
 
@@ -1018,7 +702,7 @@ while push-style APIs are very convenient and allow users to write complex logic
 To avoid divergence between these APIs, we should stick to the state-based pull-style API as the primary record of truth,
 with push-style events derived from it using systems which run just after it is updated during the input-mapping step.
 
-This is recorded in the `ActionState` of each actor, tracked as a component on the entity that is actually acting (see WM2, WM6).
+This is recorded in the `ActionState` of each actor, tracked as a component on the entity that is actually acting (see WM2, WM4).
 
 ```rust
 /// A collection of [`ActionStatus`], representing the state of each action for a given actor.
@@ -1092,7 +776,7 @@ Disabling requires its own set of events:
 
 Transitions from a state to the same state never emit events.
 
-This state machine may be complicated later (in terms of library development) by tracking progress through each of these states: things like hold durations or active durations after the action is pressed (see WI8),
+This state machine may be complicated later (in terms of library development) by tracking progress through each of these states: things like hold durations or active durations after the action is pressed (see I19),
 but the central states and the events emitted on each edge can remain consistent.
 
 Each of these action events are entity-targeted, and contain the following information:
@@ -1165,15 +849,15 @@ allowing users to opt out of this concept completely if desired (e.g. for learni
 
 The other thing that we must track is the disabled state of each action and context.
 That's simple enough, but belongs to each action *instance*, not the action as a whole.
-As a result, it belongs on the `ActionState` component for each entity (see D4 and WM6).
+As a result, it belongs on the `ActionState` component for each entity (see D4 and WM4).
 Tracking both disabled *actions* seperately from disabled *contexts* is useful,
 as it allows us to ensure that actions disabled for reasons *other* than their context do not become re-activated when their context activates.
 Consider a passive that disables one of your conditional moves, for example.
 
-Note that local multiplayer adds another wrinkle: the disabling maps must be also be keyed by owner, see WM6.
+Note that local multiplayer adds another wrinkle: the disabling maps must be also be keyed by owner, see WM4.
 
 Contexts use a runtime `ContextId` identifier, with a stable path and a custom type,
-following the exact same pattern as actions (WA1) and players (WM6).
+following the exact same pattern as actions (WA1) and players (WM4).
 
 The exact semantics of "what does it mean for an action to be disabled" should follow BAM.
 
@@ -1221,9 +905,9 @@ In order to determine which actions take effect for a given set of inputs,
 we must solve the arbitration ("clashing inputs") problem: what happens if both `S` and `Ctrl+S` are bound?
 
 The results of this arbitration can be cached and computed incrementally,
-whenever the `InputMap` changes, although the `Owner` of each action should be considered (see WM6).
+whenever the `InputMap` changes, although the `Owner` of each action should be considered (see WM4).
 Centralizing this gives games the ability to simply reject pathological input bindings (e.g. "F is already bound to Pay Respects")
-through the use of `Result`-ful input binding APIs (WM7).
+through the use of `Result`-ful input binding APIs (WM5).
 
 Arbitration should default to a simple, deterministic set of rules, with "prioritize the longest chord" at its core,
 but we should allow actions to define their own optional priority values (with conventions for standard values),

@@ -23,7 +23,7 @@ Create:
 
 - `bevy_actions` crate, with good library docs that explain the core model
 - `Action` trait (just a marker for now), with a trivial derive macro and action registration (WA1)
-- `InputMap` resource (WM1) and fallible binding API (WM7)
+- `InputMap` resource (WM1) and fallible binding API (WM5)
 - `ActionState` component (D4)
 - simple `Active`/`Inactive` `ActionLifecycle` enum (D4)
 - core input mapping systems, running in `PreUpdate`
@@ -45,7 +45,7 @@ Make sure that observers work as expected.
 
 ## Phase 4: Chords
 
-1. Add support for chorded inputs (WI7).
+1. Add support for chorded inputs (WI5).
 2. Handle clashing inputs simply, according to the longest input, then by `ActionId` (stable but arbitrary).
 3. Add an optional priority value to `Action`.
 4. Optimize checking for clashes using caching.
@@ -60,12 +60,12 @@ Add derive macro helpers for controlling the shape of inputs.
 
 ## Phase 6: Presets
 
-Add a preset concept, as discussed in WM4.
+Add a preset concept, as discussed in R8.
 
 ## Phase 7: Serialization
 
 1. Add feature-flagged serde derives *everywhere*.
-2. Add versioning fields, per WM5.
+2. Add versioning fields, per R9.
 3. Add a clear and simple example of how to do this.
 
 ## Phase 8: Disabling actions
@@ -77,7 +77,7 @@ Add a preset concept, as discussed in WM4.
 
 ## Phase 9: Local multiplayer
 
-1. Add `Owner` and `PlayerId`, per WM6.
+1. Add `Owner` and `PlayerId`, per WM4.
 2. Add an `InputRoot` entity.
 3. Refactor `InputMap` data structure and systems to make these work with multiple actors.
 4. Add an example.
@@ -113,13 +113,13 @@ Include an example.
 
 1. Add tools for defining device-specific deadzones and drift compensation to `bevy_input`. Ensure this information is serializable.
 2. Add a ready-to-copy example for easy calibration.
-3. Add a simple, standardized collection of tunables (see WI9, BAM's tunables and BEI's conditions). Ensure they can be bound and serialized correctly.
+3. Add a simple, standardized collection of tunables (see I20, BAM's tunables and BEI's conditions). Ensure they can be bound and serialized correctly.
 
 Add examples for fancier, game-specific effects like oddly-shaped dead zones.
 
 ## Side Quest V: Virtual Inputs
 
-Add enum variants and helpers for constructing inputs out of inputs of other shapes (e.g. virtual D-pads from WASD). See WI6 for the design.
+Add enum variants and helpers for constructing inputs out of inputs of other shapes (e.g. virtual D-pads from WASD). See I18 for the design.
 
 ## Side Quest A: Automation
 
@@ -131,7 +131,7 @@ See I6 for more discussion on automation.
 
 ## Side Quest M: Migration
 
-Add an example of migrating a serialized input map from one version of a game to the next, using the tools outlined in WM5.
+Add an example of migrating a serialized input map from one version of a game to the next, using the tools outlined in R9.
 
 ## Side Quest H: Held Inputs (and friends)
 
@@ -139,7 +139,7 @@ Add more complex, timing-based inputs (e.g. `Hold`) that can be bound.
 Update the state machine to add a `Tentative` variant,
 and emit `Cancelled` and `Started` events.
 
-See D4 and WI8 for discussion.
+See D4 and I19 for discussion.
 
 ## Side Quest B: Action Buffering
 
