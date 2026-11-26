@@ -29,7 +29,7 @@ The questions that drive these decisions follow below, with the following struct
   
 Extend as needed by real users (e.g. 3D inputs for VR).
 
-#### WI2: How do we handle streams of input messages from across diverse input devices, and what do we bind to our actions?
+#### WI2: How should we model input across device types?
 
 **Status:** Proposed
 
