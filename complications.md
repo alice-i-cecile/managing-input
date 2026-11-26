@@ -310,6 +310,17 @@ This allows them to be saved and loaded smoothly, using the same serialization m
 More gameplay-specific effects, such as applying smoothing or fancy deadzone and snapping shapes belong at the gameplay logic level, and should be hand-authored by application devs.
 These should be taught through practical, scoped usage examples.
 
+#### I21: Mapping input devices to players
+
+**Status:** TODO
+
+**Problem:** TODO
+
+**Solution:** The mapping between input devices and players discussed in WM2 must also be maintained, likely in its own resource, `DeviceMapping`, which could live in `bevy_input` itself.
+
+We should follow BAM's strategy of expanding this beyond gamepads, as the cost is relatively low and the consistency benefits are nice.
+Persistent device identifiers (which work to at least some degree across disconnects) would also help improve robustness.
+
 ### Mapping
 
 #### M1: How do we deal with overlapping inputs?

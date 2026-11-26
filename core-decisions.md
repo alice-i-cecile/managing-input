@@ -436,9 +436,7 @@ In contrast to the shared input map, each player needs their own distinct `Actio
 tracking which actions are pressed, their value, what's disabled (D5) etc.
 This is stored as a component on each entity, as  the `PlayerId` required to map players to their bindings.
 
-The mapping between input devices and players must also be maintained, likely in its own resource, `DeviceMapping`, which could live in `bevy_input` itself.
-We should follow BAM's strategy of expanding this beyond gamepads, as the cost is relatively low and the constistent benefits are good.
-Persistent device identifiers (which work to at least some degree across disconnects) would also help improve robutsness.
+The device-to-player mapping is discussed in I21, while stable device identity is complication I12.
 
 #### WM3: Where in the ECS do we store the mapping?
 
