@@ -741,10 +741,7 @@ Disabling requires its own set of events:
 
 - Going to `ActionLifecycle::Disabled` from any other state emits a `Disabled<A>` event, while the reverse emits an `Enabled<A>` event.
 - Going from `Tentative` or `Active` to `Disabled` emits a `Canceled` event
-- When an action is re-enabled, the transition is determined by the `require_reset` property set for that action, in combination with the currently active inputs
-  - if `require_reset` is true, the value must return to its "neutral" state before the action can be re-activated
-  - this prevents actions from having multiple effects when transitioning across game states, most commonly encountered in a game where you press `Escape` to pause, and then can press `Escape` again to close the menu
-  - `require_reset` should default to on for button-like actions, and off for all other action shapes
+See D5 for more details.
 
 Transitions from a state to the same state never emit events.
 
@@ -831,7 +828,12 @@ Note that local multiplayer adds another wrinkle: the disabling maps must be als
 Contexts use a runtime `ContextId` identifier, with a stable path and a custom type,
 following the exact same pattern as actions (WA1) and players (WM2).
 
-The exact semantics of "what does it mean for an action to be disabled" should follow BAM.
+The exact semantics of "what does it mean for an action to be disabled" are inspired by BAM:
+
+- When an action is re-enabled, the transition is determined by the `require_reset` property set for that action, in combination with the currently active inputs
+  - if `require_reset` is true, the value must return to its "neutral" state before the action can be re-activated
+  - this prevents actions from having multiple effects when transitioning across game states, most commonly encountered in a game where you press `Escape` to pause, and then can press `Escape` again to close the menu
+  - `require_reset` should default to on for button-like actions, and off for all other action shapes
 
 ### D6: How do we ensure that a pressed input has only the desired effect?
 
