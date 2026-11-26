@@ -586,26 +586,6 @@ However, if we store that `ActionPath` <-> `ActionId` mapping (bidirectionally),
 *inside* of the `InputMap`, we can directly serialize the data *back* into `ActionPath` form,
 no external registry required.
 
-#### Serializing divergences?
-
-`bevy_action_map`'s design brings up an interesting question:
-should we serialize the *difference* from a preset,
-or the entire input map?
-
-Serializing the difference shrinks the storage,
-and allows us to distinguish between user-set and default values (see R8).
-This distinction is quite helpful when attempting to migrate (see R9).
-
-By contrast, serializing the entire map is simpler,
-allows for easier inspection (just read the whole file),
-and does not require us to store and track old defaults to handle migrations.
-
-We think that we should prefer the simpler, more robust design and simply serialize
-the entire input map, as the size costs are insignificant.
-
-As discussed in R9, we can preserve the benefits of provenance information by logging this
-explicitly in the input map.
-
 #### WM5: How do users bind inputs to actions?
 
 **Status:** Proposed
