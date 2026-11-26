@@ -696,7 +696,7 @@ This is a minor problem for games, but *much* more important for complex, long-l
 
 `bevy_action_map` does best, with a numeric version field for the `action_map_version`.
 This covers the version of the *action mapping* crate (useful, in case the schema/strategy changes),
-but does not cover the more common case where the 
+but does not cover the more common case where the actions themselves change.
 
 **Solution:**
 

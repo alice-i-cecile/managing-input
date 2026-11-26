@@ -244,8 +244,6 @@ Adding bindings should always return a `Result`, with errors on mismatches.
 This is much less onerous than it would have been in previous versions of Bevy,
 as our `?` error handling ergonomics are much improved.
 
-This validation makes it easy to define the set of permissible 
-
 Derive macro helpers are perfectly pleasant, and should be added at some point.
 
 Inputs can be converted from one shape to another (e.g. a virtual D-pad) (I18).
