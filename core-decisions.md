@@ -355,8 +355,8 @@ as that would propagate into the `InputMap` type, and make it impossible to fetc
 without a whole whack of incidental complexity.
 
 The selected `Vec<Option<BindingRow>>` design, with private fields, configuration,
-and runtime-enforced invariants.
-This offers a reasonable compromise between enforced strictness and flexibility, at the cost of some complexity.
+and runtime-enforced invariants,
+offers a reasonable compromise between enforced strictness and flexibility, at the cost of some complexity.
 However, because we want to make this field private *anyways* (see WM4),
 the cost is amortized across these design choices.
 
