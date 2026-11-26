@@ -240,11 +240,9 @@ as unit-type actions (ala BEI) are dominant.
 Instead, we should use a simple associated constant enum (`InputShape`, which can be computed for our various `Control` types to ensure a match).
 This is fine: we have no need for object safety, and there's only one kind of action per type defined.
 
-Adding bindings should always return a `Result`, with errors on mismatches.
-This is much less onerous than it would have been in previous versions of Bevy,
-as our `?` error handling ergonomics are much improved.
-
 Derive macro helpers are perfectly pleasant, and should be added at some point.
+
+See WM5 for handling shape mismatches during binding.
 
 Inputs can be converted from one shape to another (e.g. a virtual D-pad) (I18).
 However, as discussed there, this proposal suggests we should be quite explicit and conservative there,
