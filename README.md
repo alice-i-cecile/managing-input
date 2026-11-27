@@ -35,3 +35,6 @@ but critical complications or fundamental disagreements should be resolved befor
  
 Many complications remain incomplete (it's better to get the core design up for debate ASAP);
 filling these in is an excellent way to help out!
+
+Per [Bevy's AI policy](https://bevy.org/learn/contribute/policies/ai/),
+please write any prose yourself, although the use of LLMs is fine for mechanical edits, review and background research.
