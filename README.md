@@ -32,3 +32,6 @@ Just submit a PR so we can debate designs and make this easier for others to und
 
 Broadly I would like to avoid fine-grained planning (just start writing code),
 but critical complications or fundamental disagreements should be resolved before we begin, even if we're simply agreeing to disagree.
+ 
+Many complications remain incomplete (it's better to get the core design up for debate ASAP);
+filling these in is an excellent way to help out!
