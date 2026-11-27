@@ -484,7 +484,7 @@ Keeping all of the information in a single place makes this very straightforward
 while the standard Rust nature of the setup improves robustness and makes documentation and comprehension easy.
 
 Changing the input bindings is a simple struct mutation (no separate `Overrides` concept required, no ECS operations),
-and these mutations made can be serialized directly (see WM4, R8 and R9).
+and these mutations can be serialized directly (see WM4, R8 and R9).
 
 However, being able to check the state of each action (e.g. "is Jump pressed") on the same entity as the player
 is incredibly convenient, both in systems and observers.
@@ -557,7 +557,7 @@ LWIM did this by recording actions as `enum`s: with custom `PartialEq` and `Hash
 for actions which store data (otherwise `Move(-1.)` does not give you the same lookup as `Move(1.)`).
 
 This is something of a mess, and because of our choice in WA1, we cannot do the same here.
-Instead, we are forced into two different representations of our keys: the ephemeral `Actionid` of a tiny `ActionId`, as defined in WA1, and at rest, an `ActionPath`, following `bevy_action_map`.
+Instead, we are forced into two different representations of our keys: the ephemeral `ActionId`, a tiny hash, as defined in WA1, and at rest, an `ActionPath`, following `bevy_action_map`.
 
 An `ActionPath` is a simple newtype over a string,
 generated, by default, from the type path of the `Action`,
@@ -637,7 +637,7 @@ which would take an `impl Into<ButtonControl>` instead, and validate that the ac
 
 Actions are not grouped into contexts at input binding time (see D5),
 nor are the properties of each action (conditions, in BEI's terms) defined there.
-Instead, this information about each action belongs to is defined on that *action*,
+Instead, this information about each action should be defined on that *action*,
 registered in the `InputMap` with the action.
 See I20 for more discussion on this point.
 
@@ -739,6 +739,7 @@ Disabling requires its own set of events:
 
 - Going to `ActionLifecycle::Disabled` from any other state emits a `Disabled<A>` event, while the reverse emits an `Enabled<A>` event.
 - Going from `Tentative` or `Active` to `Disabled` emits a `Canceled` event
+
 See D5 for more details.
 
 Transitions from a state to the same state never emit events.
@@ -800,7 +801,7 @@ Neither offers any additional helpers to make enabling and disabling actions and
 although BAM has extremely clear semantics for what exactly disabling *does*.
 
 Both crates also have a notion of "context priority", which controls which actions take effect *first*,
-with inputs "consumed" by the actions that used them, making them appear unavailable to other lower-priority.
+with inputs "consumed" by the actions that used them, making them appear unavailable to other lower-priority actions.
 See D6 for more discussion on this point.
 
 **Solution:** The primary requirements here are simple:
@@ -839,7 +840,7 @@ The exact semantics of "what does it mean for an action to be disabled" are insp
 
 **Problem:** Suppose we're building an RTS. Left click is bound to "tell unit to move", and the player clicks on a GUI element. The unit should not move! A similar problem arises for hotkeys, when elements are focused or overlays are active.
 
-**Prior art:** The traditional solution to this problem is "input consumption". Once an action takes effect, we mark its inputs as "consumed" for the frame, and can no longer trigger. In our example, the GUI click "consumes" the left mouse button, and so the unit movement system never sees the click at all.
+**Prior art:** The traditional solution to this problem is "input consumption". Once an action takes effect, we mark its inputs as "consumed" for the frame, and other actions that use those inputs can no longer be triggered. In our example, the GUI click "consumes" the left mouse button, and so the unit movement system never sees the click at all.
 
 This can also be used, somewhat implicitly, to handle clashing inputs in the case of chords (M1), by e.g. consuming the `S` from `Ctrl+S` to prevent "walk backwards" from happening when state is saved.
 

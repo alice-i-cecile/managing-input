@@ -28,7 +28,7 @@ which should make both collaborating and detailed discussion easier.
 
 Don't be intimidated though!
 I'd like your fixes, complaints, thoughts, etc.
-Just submit a PR so we can debate designs and .
+Just submit a PR so we can debate designs and make this easier for others to understand <3
 
 Broadly I would like to avoid fine-grained planning (just start writing code),
 but critical complications or fundamental disagreements should be resolved before we begin, even if we're simply agreeing to disagree.

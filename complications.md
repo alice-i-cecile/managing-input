@@ -272,20 +272,20 @@ Fighting games have complex inputs (timing windows, directional inputs), but imp
 
 Game-level accessibility config of this sort, when offered, typically allows users to convert holds to rapid presses or vice versa, swap between holds and toggles, or control windows for timing.
 
-`bevy_picking` various [`PointerPress`](https://docs.rs/bevy/latest/bevy/picking/events/struct.PointerPress.html) entity-targeted events for the entire lifecycle.
+`bevy_picking` provides various [`PointerPress`](https://docs.rs/bevy/latest/bevy/picking/events/struct.PointerPress.html) entity-targeted events for the entire lifecycle.
 
 **Solution:** Fundamentally, BEI's conditions are trying to do too much. They represent an excellent coverage of *use cases*, but they should not be solved with a single complex design.
 
 Instead, split them like so:
 
-| Category             | Examples                               | Implementation                                                          | Layer             | Why                                                                                                               |
-| -------------------- | -------------------------------------- | ----------------------------------------------------------------------- | ----------------- | ----------------------------------------------------------------------------------------------------------------- |
-| Chords               | Ctrl + S                               | Baked into the `Binding` type                                           | Input mapping     | Foundational input primitive, and clashes must be resolved holistically                                           |
-| Press patterns       | Press, hold, tap, release              | Declared on the action at registration, with enum variants              | Input mapping     | Very complex and flexible, and hold vs tap vs release etc is tied to the *meaning* of each action, not rebindable |
-| Combos and cooldowns | Fighting games                         | Game-specific logic, derived from action events                         | Game logic        | Timing details etc are very sensitive; can be derived entirely from action-level events                           |
+| Category             | Examples                              | Implementation                                                          | Layer             | Why                                                                                                               |
+| -------------------- | ------------------------------------- | ----------------------------------------------------------------------- | ----------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Chords               | Ctrl + S                              | Baked into the `Binding` type                                           | Input mapping     | Foundational input primitive, and clashes must be resolved holistically                                           |
+| Press patterns       | Press, hold, tap, release             | Declared on the action at registration, with enum variants              | Input mapping     | Very complex and flexible, and hold vs tap vs release etc is tied to the *meaning* of each action, not rebindable |
+| Combos and cooldowns | Fighting games                        | Game-specific logic, derived from action events                         | Game logic        | Timing details etc are very sensitive; can be derived entirely from action-level events                           |
 | Input thresholds     | Gamepad trigger thresholds, deadzones | Throttle and Axis control variants, with global and per-device settings | Input unification | Accessibility setting, and often driven by device normalization                                                   |
-| Input filters        | Sticky keys, repeat suppression        | Global setting in bevy_input                                            | Input unification | Accessibility setting, should be uniform across inputs                                                            |
-| Gestures             | Swipe left, pinch-to-zoom              | Gesture state machines                                                  | Raw input         | Needs to be fed *in* to bevy_input, shape of gestures varies                                                      |
+| Input filters        | Sticky keys, repeat suppression       | Global setting in bevy_input                                            | Input unification | Accessibility setting, should be uniform across inputs                                                            |
+| Gestures             | Swipe left, pinch-to-zoom             | Gesture state machines                                                  | Raw input         | Needs to be fed *in* to bevy_input, shape of gestures varies                                                      |
 
 Accessibility options such as hold-versus-toggle are a per-owner override of the action's pattern, stored beside the map (I20), not binding data.
 
@@ -657,6 +657,8 @@ pub struct BindingPreset {
   /// The input bindings set by this preset.
   ///
   /// Note that this is sparse:
+  /// not every action needs a preset input binding,
+  /// nor does every slot for each action.
   pub rows: Vec<InputBinding>,
 }
 ```
@@ -669,7 +671,7 @@ This may seem fussy for the code-only path, but that's nothing a couple helpers 
 If you want to declare this as an asset to enable later selection / extension:
 
 ```rust
-fn define_default_input_bindings(mut presets: ResMut<Assets<BindingPresets>>){
+fn define_default_input_bindings(mut presets: ResMut<Assets<BindingPreset>>){
   let default_bindings = BindingPresets::new("default")
     .bind(KeyCode::Space, Jump)
     .bind(KeyCode::Enter, Interact)
@@ -698,7 +700,7 @@ fn define_default_input_bindings(mut input_map: ResMut<InputMap>){
 
 **Problem:** Suppose a player defines some custom keybindings in your game.
 
-Your game releases a new version, removing an action that was added, renaming another, and adding a new one.
+Your game releases a new version, removing an existing action, renaming another, and adding a new one.
 How do you avoid forcing the user to remember and reset all of their key bindings?
 
 This is a minor problem for games, but *much* more important for complex, long-lived applications, like editors.
