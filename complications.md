@@ -671,7 +671,7 @@ This may seem fussy for the code-only path, but that's nothing a couple helpers 
 If you want to declare this as an asset to enable later selection / extension:
 
 ```rust
-fn define_default_input_bindings(mut presets: ResMut<Assets<BindingPreset>>){
+fn define_default_preset(mut presets: ResMut<Assets<BindingPreset>>){
   let default_bindings = BindingPresets::new("default")
     .bind(KeyCode::Space, Jump)
     .bind(KeyCode::Enter, Interact)
